@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Dashboards are app-only, no SEO value
+Disallow: /customer-dashboard
+Disallow: /pro-dashboard
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://mjeshtri.al/sitemap.xml
