@@ -3,16 +3,21 @@ import DashboardPage from '@/dashboard/components/DashboardPage';
 import JobCard from '@/dashboard/components/JobCard';
 import SearchAndFilterBar from '@/dashboard/components/SearchAndFilterBar';
 import EmptyState from '@/dashboard/components/EmptyState';
-import { openJobs } from '@/data/demoJobs';
+import LoadingState from '@/dashboard/components/LoadingState';
+import { useAsync } from '@/hooks/useAsync';
+import { api } from '@/lib/api';
 import { categoryLabel } from '@/data/services';
 import { areas } from '@/data/areas';
-
-const categories = [...new Set(openJobs.map((j) => j.category))];
 
 export default function AvailableJobs() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [area, setArea] = useState('');
+
+  const { data, loading } = useAsync(() => api.availableJobs(), []);
+  const openJobs = data || [];
+
+  const categories = useMemo(() => [...new Set(openJobs.map((j) => j.category))], [openJobs]);
 
   const filtered = useMemo(
     () =>
@@ -22,7 +27,7 @@ export default function AvailableJobs() {
         const a = !area || j.area === area;
         return s && c && a;
       }),
-    [search, category, area]
+    [openJobs, search, category, area]
   );
 
   return (
@@ -37,7 +42,9 @@ export default function AvailableJobs() {
         ]}
       />
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <LoadingState rows={3} />
+      ) : filtered.length === 0 ? (
         <EmptyState icon="SearchX" title="Asnjë punë nuk u gjet" text="Provo të heqësh disa filtra ose kontrollo më vonë." />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">

@@ -5,19 +5,29 @@ export default function BidForm({ onSubmit }) {
   const [form, setForm] = useState({ price: '', arrival: '', completion: '', message: '' });
   const [errors, setErrors] = useState({});
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const errs = {};
     if (!form.price) errs.price = 'Shkruaj çmimin.';
     if (!form.arrival.trim()) errs.arrival = 'Shkruaj kohën e mbërritjes.';
     if (!form.message.trim()) errs.message = 'Shkruaj një mesazh.';
     setErrors(errs);
-    if (Object.keys(errs).length === 0) {
+    if (Object.keys(errs).length > 0) return;
+
+    setBusy(true);
+    setSubmitError('');
+    try {
+      await onSubmit?.(form);
       setSent(true);
-      onSubmit?.(form);
+    } catch (err) {
+      setSubmitError(err.message || 'Dërgimi i ofertës dështoi.');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -58,7 +68,15 @@ export default function BidForm({ onSubmit }) {
         />
       </Field>
 
-      <button type="submit" className="btn btn-primary w-full">Dërgo ofertën</button>
+      {submitError && (
+        <p className="flex items-center gap-2 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <Icon name="AlertCircle" className="h-4 w-4" /> {submitError}
+        </p>
+      )}
+
+      <button type="submit" disabled={busy} className="btn btn-primary w-full disabled:opacity-60">
+        {busy ? 'Po dërgohet…' : 'Dërgo ofertën'}
+      </button>
     </form>
   );
 }

@@ -2,15 +2,23 @@ import { useParams, Link } from 'react-router-dom';
 import DashboardPage from '@/dashboard/components/DashboardPage';
 import JobDetails from '@/dashboard/components/JobDetails';
 import BidForm from '@/dashboard/components/BidForm';
-import BidCard from '@/dashboard/components/BidCard';
 import EmptyState from '@/dashboard/components/EmptyState';
+import LoadingState from '@/dashboard/components/LoadingState';
 import Icon from '@/components/ui/Icon';
-import { getJobById } from '@/data/demoJobs';
-import { bidsByJob } from '@/data/demoBids';
+import { useAsync } from '@/hooks/useAsync';
+import { api } from '@/lib/api';
 
 export default function JobDetailsPage() {
   const { id } = useParams();
-  const job = getJobById(id);
+  const { data: job, loading, reload } = useAsync(() => api.getJob(id), [id]);
+
+  if (loading) {
+    return (
+      <DashboardPage title="Detajet e punës">
+        <LoadingState rows={3} />
+      </DashboardPage>
+    );
+  }
 
   if (!job) {
     return (
@@ -20,7 +28,16 @@ export default function JobDetailsPage() {
     );
   }
 
-  const otherBids = bidsByJob(job.id);
+  const handleBid = async (form) => {
+    await api.createBid({
+      jobId: job.id,
+      price: form.price,
+      arrival: form.arrival,
+      completion: form.completion,
+      message: form.message,
+    });
+    reload();
+  };
 
   return (
     <DashboardPage
@@ -30,20 +47,19 @@ export default function JobDetailsPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <JobDetails job={job} />
-          <div>
-            <h2 className="mb-3 text-lg font-bold text-navy-900">Oferta të tjera ({otherBids.length})</h2>
-            <p className="mb-4 text-sm text-slate-500">Shiko se si konkurrojnë profesionistët e tjerë për këtë punë.</p>
-            <div className="space-y-3">
-              {otherBids.map((b) => (
-                <BidCard key={b.id} bid={b} selectable={false} />
-              ))}
-            </div>
+          <div className="card p-5">
+            <h2 className="text-base font-bold text-navy-900">Konkurrenca</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {job.bidsCount > 0
+                ? `${job.bidsCount} profesionistë kanë dërguar oferta për këtë punë.`
+                : 'Ende pa oferta — je i pari që mund të dërgojë!'}
+            </p>
           </div>
         </div>
 
         <div className="lg:sticky lg:top-24 lg:self-start">
           {job.status === 'Open for Bids' ? (
-            <BidForm />
+            <BidForm onSubmit={handleBid} />
           ) : (
             <div className="card p-6 text-center">
               <Icon name="Lock" className="mx-auto h-6 w-6 text-slate-300" />
