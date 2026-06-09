@@ -5,17 +5,24 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import ProfessionalCard from '@/components/ProfessionalCard';
 import CTASection from '@/components/CTASection';
 import Icon from '@/components/ui/Icon';
-import { professionals } from '@/data/demoProfessionals';
-import { allCategories, categoryLabel } from '@/data/services';
+import { useAsync } from '@/hooks/useAsync';
+import { api } from '@/lib/api';
+import { categoryLabel } from '@/data/services';
 import { areas } from '@/data/areas';
 import { breadcrumbSchema } from '@/utils/schemas';
-
-const categoryOptions = [...new Set(professionals.map((p) => p.category))];
 
 export default function Professionals() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [area, setArea] = useState('');
+
+  const { data, loading, error } = useAsync(() => api.listProfessionals(), []);
+  const professionals = data || [];
+
+  const categoryOptions = useMemo(
+    () => [...new Set(professionals.map((p) => p.category))],
+    [professionals],
+  );
 
   const filtered = useMemo(() => {
     return professionals.filter((p) => {
@@ -27,7 +34,7 @@ export default function Professionals() {
       const matchesArea = !area || p.areas.includes(area);
       return matchesSearch && matchesCategory && matchesArea;
     });
-  }, [search, category, area]);
+  }, [professionals, search, category, area]);
 
   const crumbs = [
     { name: 'Kreu', path: '/' },
@@ -94,10 +101,21 @@ export default function Professionals() {
           </div>
 
           <p className="mb-6 text-sm text-slate-500">
-            {filtered.length} profesionistë u gjetën
+            {loading ? 'Po ngarkohen profesionistët…' : `${filtered.length} profesionistë u gjetën`}
           </p>
 
-          {filtered.length === 0 ? (
+          {error ? (
+            <div className="card grid place-items-center gap-3 py-16 text-center">
+              <Icon name="AlertCircle" className="h-10 w-10 text-rose-300" />
+              <p className="text-slate-600">Nuk u ngarkuan dot profesionistët. Provo sërish.</p>
+            </div>
+          ) : loading ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="card h-64 animate-pulse bg-slate-50" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="card grid place-items-center gap-3 py-16 text-center">
               <Icon name="SearchX" className="h-10 w-10 text-slate-300" />
               <p className="text-slate-600">Asnjë profesionist nuk përputhet me filtrat.</p>
@@ -105,7 +123,7 @@ export default function Professionals() {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((p) => (
-                <ProfessionalCard key={p.id} professional={p} />
+                <ProfessionalCard key={p.id} pro={p} />
               ))}
             </div>
           )}

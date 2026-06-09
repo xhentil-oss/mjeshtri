@@ -8,8 +8,8 @@ import Icon from '@/components/ui/Icon';
 import CTASection from '@/components/CTASection';
 import NotFound from '@/pages/NotFound';
 
-import { getProfessionalBySlug } from '@/data/demoProfessionals';
-import { reviewsByPro } from '@/data/demoReviews';
+import { useAsync } from '@/hooks/useAsync';
+import { api, ApiError } from '@/lib/api';
 import { categoryLabel } from '@/data/services';
 import { SITE } from '@/utils/seo';
 import { professionalSchema, breadcrumbSchema } from '@/utils/schemas';
@@ -26,11 +26,28 @@ function Stat({ icon, value, label }) {
 
 export default function ProfessionalPublicProfile() {
   const { slug } = useParams();
-  const pro = getProfessionalBySlug(slug);
+  const { data: pro, loading, error } = useAsync(() => api.getProfessional(slug), [slug]);
 
-  if (!pro) return <NotFound />;
+  if (loading) {
+    return (
+      <Container className="section">
+        <div className="card h-64 animate-pulse bg-slate-50" />
+      </Container>
+    );
+  }
+  // 404 from the API (or any load error) → show the NotFound page.
+  if (error || !pro) {
+    if (error instanceof ApiError && error.status !== 404) {
+      return (
+        <Container className="section text-center text-slate-600">
+          Nuk u ngarkua dot profili. Provo sërish.
+        </Container>
+      );
+    }
+    return <NotFound />;
+  }
 
-  const proReviews = reviewsByPro(pro.id);
+  const proReviews = pro.reviewsList || [];
   const crumbs = [
     { name: 'Kreu', path: '/' },
     { name: 'Profesionistët', path: '/professionals' },
@@ -41,7 +58,7 @@ export default function ProfessionalPublicProfile() {
     <>
       <SEOHelmet
         title={`${pro.name} — ${categoryLabel(pro.category)} në Tiranë | Mjeshtri`}
-        description={`${pro.name}, ${categoryLabel(pro.category).toLowerCase()} i verifikuar në Tiranë me ${pro.rating}/5 nga ${pro.reviews} vlerësime dhe ${pro.completedJobs} punë të përfunduara. ${pro.bio.slice(0, 80)}`}
+        description={`${pro.name}, ${categoryLabel(pro.category).toLowerCase()} i verifikuar në Tiranë me ${pro.rating}/5 nga ${pro.reviews} vlerësime dhe ${pro.completedJobs} punë të përfunduara. ${(pro.bio || '').slice(0, 80)}`}
         path={`/professionals/${pro.slug}`}
         schemas={[professionalSchema(pro, proReviews), breadcrumbSchema(crumbs)]}
       />
@@ -83,7 +100,7 @@ export default function ProfessionalPublicProfile() {
                   <Stat icon="CheckCircle2" value={pro.completedJobs} label="Punë të kryera" />
                   <Stat icon="Award" value={`${pro.experience} vjet`} label="Eksperiencë" />
                   <Stat icon="Star" value={pro.rating} label="Vlerësim mesatar" />
-                  <Stat icon="Clock" value={pro.responseTime.replace('mesatarisht ', '')} label="Përgjigje" />
+                  <Stat icon="Clock" value={(pro.responseTime || '—').replace('mesatarisht ', '')} label="Përgjigje" />
                 </div>
               </div>
 

@@ -3,16 +3,17 @@ import DashboardPage from '@/dashboard/components/DashboardPage';
 import StatCard from '@/dashboard/components/StatCard';
 import JobCard from '@/dashboard/components/JobCard';
 import EmptyState from '@/dashboard/components/EmptyState';
-import { jobsByCustomer } from '@/data/demoJobs';
-import { bidsByJob } from '@/data/demoBids';
-
-const CUSTOMER_ID = 'cust-1';
+import LoadingState from '@/dashboard/components/LoadingState';
+import { useAsync } from '@/hooks/useAsync';
+import { api } from '@/lib/api';
 
 export default function CustomerDashboard() {
-  const myJobs = jobsByCustomer(CUSTOMER_ID);
+  const { data, loading } = useAsync(() => api.myJobs(), []);
+  const myJobs = data || [];
+
   const openCount = myJobs.filter((j) => j.status === 'Open for Bids').length;
   const inProgress = myJobs.filter((j) => j.status === 'In Progress').length;
-  const totalOffers = myJobs.reduce((s, j) => s + bidsByJob(j.id).length, 0);
+  const totalOffers = myJobs.reduce((s, j) => s + (j.bidsCount || 0), 0);
 
   return (
     <DashboardPage
@@ -32,7 +33,9 @@ export default function CustomerDashboard() {
           <h2 className="text-lg font-bold text-navy-900">Kërkesat e fundit</h2>
           <Link to="/customer-dashboard/requests" className="text-sm font-semibold text-amber-600 hover:underline">Shiko të gjitha</Link>
         </div>
-        {myJobs.length === 0 ? (
+        {loading ? (
+          <LoadingState rows={2} />
+        ) : myJobs.length === 0 ? (
           <EmptyState icon="FileText" title="Ende pa kërkesa" text="Dërgo kërkesën tënde të parë dhe merr oferta nga profesionistë." actionLabel="Kërko shërbim" actionTo="/request" />
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">

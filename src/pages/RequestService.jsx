@@ -1,23 +1,26 @@
 import { useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import SEOHelmet from '@/components/SEOHelmet';
 import Container from '@/components/ui/Container';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import Icon from '@/components/ui/Icon';
 import { allCategories } from '@/data/services';
 import { areas } from '@/data/areas';
-import { getProfessionalBySlug } from '@/data/demoProfessionals';
 import { breadcrumbSchema } from '@/utils/schemas';
+import { useAuth } from '@/context/AuthContext';
+import { api } from '@/lib/api';
 
 const urgencyLevels = ['Sot', 'Brenda 24 orëve', 'Këtë javë', 'Jo urgjente'];
 const contactMethods = ['Telefon', 'WhatsApp', 'Email'];
 
 export default function RequestService() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isCustomer = user?.role === 'customer';
+
   const prefillCategory = params.get('category') || '';
   const prefillArea = params.get('area') || '';
-  const proSlug = params.get('pro');
-  const targetedPro = proSlug ? getProfessionalBySlug(proSlug) : null;
 
   const [form, setForm] = useState({
     name: '', phone: '', email: '',
@@ -27,19 +30,47 @@ export default function RequestService() {
   });
   const [errors, setErrors] = useState({});
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const errs = {};
-    if (!form.name.trim()) errs.name = 'Shkruaj emrin tënd.';
-    if (!form.phone.trim()) errs.phone = 'Shkruaj numrin e telefonit.';
+    if (!isCustomer && !form.name.trim()) errs.name = 'Shkruaj emrin tënd.';
+    if (!isCustomer && !form.phone.trim()) errs.phone = 'Shkruaj numrin e telefonit.';
     if (!form.category) errs.category = 'Zgjidh një kategori.';
     if (!form.area) errs.area = 'Zgjidh një zonë.';
     if (!form.description.trim()) errs.description = 'Përshkruaj problemin.';
     setErrors(errs);
-    if (Object.keys(errs).length === 0) setSent(true);
+    if (Object.keys(errs).length > 0) return;
+
+    // Posting a job requires a customer account. Send them to register/login,
+    // remembering where they were headed.
+    if (!isCustomer) {
+      navigate('/register/customer', { state: { from: '/request' } });
+      return;
+    }
+
+    setBusy(true);
+    setSubmitError('');
+    try {
+      await api.createJob({
+        category: form.category,
+        area: form.area,
+        title: form.description.slice(0, 80),
+        description: form.description,
+        urgency: form.urgency,
+        budget: form.budget,
+        contact: form.contact,
+      });
+      setSent(true);
+    } catch (err) {
+      setSubmitError(err.message || 'Dërgimi dështoi.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const crumbs = [
@@ -66,9 +97,6 @@ export default function RequestService() {
                 <Link to="/customer-dashboard/offers" className="btn btn-primary">Shiko ofertat e mia</Link>
                 <Link to="/" className="btn btn-outline">Kthehu në fillim</Link>
               </div>
-              <p className="mt-6 text-xs text-slate-400">
-                Demo: kërkesa nuk dërgohet te një server real. Lidhe me backend-in për ta aktivizuar.
-              </p>
             </div>
           </Container>
         </section>
@@ -103,11 +131,12 @@ export default function RequestService() {
 
       <section className="section bg-white">
         <Container className="max-w-3xl">
-          {targetedPro && (
-            <div className="mb-6 flex items-center gap-3 rounded-2xl bg-navy-50 p-4 text-navy-800">
-              <Icon name="UserCheck" className="h-5 w-5 text-navy-600" />
+          {!isCustomer && (
+            <div className="mb-6 flex items-center gap-3 rounded-2xl bg-amber-50 p-4 text-amber-800">
+              <Icon name="Info" className="h-5 w-5 shrink-0 text-amber-600" />
               <p className="text-sm">
-                Kjo kërkesë do t'i dërgohet me prioritet profesionistit <strong>{targetedPro.name}</strong>.
+                Për të dërguar kërkesën dhe për të ndjekur ofertat, duhet një llogari klienti.
+                Pasi të plotësosh formën, do të të kërkohet të regjistrohesh ose të hysh.
               </p>
             </div>
           )}
@@ -194,11 +223,16 @@ export default function RequestService() {
                 Ngarko foto të problemit
                 <input type="file" accept="image/*" className="hidden" multiple />
               </label>
-              <p className="mt-1 text-xs text-slate-400">Demo: ngarkimi nuk ruhet.</p>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-lg w-full">
-              Dërgo kërkesën
+            {submitError && (
+              <p className="flex items-center gap-2 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                <Icon name="AlertCircle" className="h-4 w-4" /> {submitError}
+              </p>
+            )}
+
+            <button type="submit" disabled={busy} className="btn btn-primary btn-lg w-full disabled:opacity-60">
+              {busy ? 'Po dërgohet…' : isCustomer ? 'Dërgo kërkesën' : 'Vazhdo'}
             </button>
             <p className="text-center text-xs text-slate-400">
               Falas dhe pa detyrime. Merr oferta para se të vendosësh.

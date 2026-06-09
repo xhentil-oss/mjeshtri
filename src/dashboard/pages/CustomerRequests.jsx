@@ -2,12 +2,13 @@ import { Link } from 'react-router-dom';
 import DashboardPage from '@/dashboard/components/DashboardPage';
 import JobCard from '@/dashboard/components/JobCard';
 import EmptyState from '@/dashboard/components/EmptyState';
-import { jobsByCustomer } from '@/data/demoJobs';
-
-const CUSTOMER_ID = 'cust-1';
+import LoadingState from '@/dashboard/components/LoadingState';
+import { useAsync } from '@/hooks/useAsync';
+import { api } from '@/lib/api';
 
 export default function CustomerRequests() {
-  const myJobs = jobsByCustomer(CUSTOMER_ID);
+  const { data, loading } = useAsync(() => api.myJobs(), []);
+  const myJobs = data || [];
 
   return (
     <DashboardPage
@@ -15,7 +16,9 @@ export default function CustomerRequests() {
       subtitle="Të gjitha kërkesat e shërbimit që ke dërguar."
       action={<Link to="/request" className="btn btn-primary btn-sm">Kërkesë e re</Link>}
     >
-      {myJobs.length === 0 ? (
+      {loading ? (
+        <LoadingState rows={3} />
+      ) : myJobs.length === 0 ? (
         <EmptyState icon="FileText" title="Ende pa kërkesa" actionLabel="Kërko shërbim" actionTo="/request" />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">

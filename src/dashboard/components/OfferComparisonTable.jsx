@@ -1,8 +1,6 @@
-import { Link } from 'react-router-dom';
 import ReviewStars from '@/components/ReviewStars';
 import Avatar from '@/components/ui/Avatar';
 import Icon from '@/components/ui/Icon';
-import { getProfessionalById } from '@/data/demoProfessionals';
 import { formatALL } from '@/utils/formatCurrency';
 
 const labelStyles = {
@@ -32,8 +30,7 @@ export default function OfferComparisonTable({ bids = [], onSelect }) {
         </thead>
         <tbody className="divide-y divide-slate-100">
           {bids.map((b) => {
-            const pro = getProfessionalById(b.proId);
-            if (!pro) return null;
+            const pro = b.pro || {};
             return (
               <tr key={b.id} className="hover:bg-mist/50">
                 <td className="px-4 py-3">
@@ -73,8 +70,7 @@ export default function OfferComparisonTable({ bids = [], onSelect }) {
       {/* Mobile cards */}
       <div className="divide-y divide-slate-100 md:hidden">
         {bids.map((b) => {
-          const pro = getProfessionalById(b.proId);
-          if (!pro) return null;
+          const pro = b.pro || {};
           return (
             <div key={b.id} className="p-4">
               <div className="flex items-center justify-between">

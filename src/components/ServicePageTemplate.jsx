@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Search, MessageCircle, Check, ArrowRight, MapPin } from 'lucide-react';
 import { services } from '@/data/services';
-import { professionalsByCategory } from '@/data/demoProfessionals';
+import { useAsync } from '@/hooks/useAsync';
+import { api } from '@/lib/api';
 import { areas } from '@/data/areas';
 import { SITE } from '@/utils/seo';
 import { serviceSchema, faqSchema, breadcrumbSchema, localBusinessSchema } from '@/utils/schemas';
@@ -16,7 +17,8 @@ import Icon from './ui/Icon';
 
 export default function ServicePageTemplate({ service }) {
   const related = services.filter((s) => s.slug !== service.slug).slice(0, 3);
-  const pros = professionalsByCategory(service.category);
+  const { data } = useAsync(() => api.listProfessionals({ category: service.category }), [service.category]);
+  const pros = data || [];
   const path = `/services/${service.slug}`;
 
   const crumbs = [
