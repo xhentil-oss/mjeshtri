@@ -1,8 +1,7 @@
 import ReviewStars from '@/components/ReviewStars';
 import Icon from '@/components/ui/Icon';
-import { getProfessionalById } from '@/data/demoProfessionals';
 
-export default function AdminReviewsTable({ reviews = [] }) {
+export default function AdminReviewsTable({ reviews = [], onDelete }) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-100">
       <table className="w-full min-w-[760px] text-left text-sm">
@@ -17,28 +16,22 @@ export default function AdminReviewsTable({ reviews = [] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {reviews.map((r) => {
-            const pro = getProfessionalById(r.proId);
-            return (
-              <tr key={r.id} className="hover:bg-mist/50">
-                <td className="px-4 py-3 font-medium text-navy-900">{r.customer}</td>
-                <td className="px-4 py-3 text-slate-600">{pro?.name || '—'}</td>
-                <td className="px-4 py-3"><ReviewStars rating={r.rating} size={12} showValue /></td>
-                <td className="px-4 py-3 max-w-xs truncate text-slate-600" title={r.text}>{r.text}</td>
-                <td className="px-4 py-3 text-xs text-slate-400">{r.date}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <button className="grid h-8 w-8 place-items-center rounded-lg text-amber-600 hover:bg-amber-50" title="Raporto">
-                      <Icon name="Flag" className="h-4 w-4" />
-                    </button>
-                    <button className="grid h-8 w-8 place-items-center rounded-lg text-rose-600 hover:bg-rose-50" title="Fshij">
-                      <Icon name="Trash2" className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
+          {reviews.map((r) => (
+            <tr key={r.id} className="hover:bg-mist/50">
+              <td className="px-4 py-3 font-medium text-navy-900">{r.customer}</td>
+              <td className="px-4 py-3 text-slate-600">{r.proName || '—'}</td>
+              <td className="px-4 py-3"><ReviewStars rating={r.rating} size={12} showValue /></td>
+              <td className="px-4 py-3 max-w-xs truncate text-slate-600" title={r.text}>{r.text}</td>
+              <td className="px-4 py-3 text-xs text-slate-400">{(r.date || '').slice(0, 10)}</td>
+              <td className="px-4 py-3">
+                <div className="flex items-center justify-end gap-1.5">
+                  <button onClick={() => onDelete?.(r.id)} className="grid h-8 w-8 place-items-center rounded-lg text-rose-600 hover:bg-rose-50" title="Fshij">
+                    <Icon name="Trash2" className="h-4 w-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

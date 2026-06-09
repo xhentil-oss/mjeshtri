@@ -1,16 +1,11 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '@/components/ui/Avatar';
 import Icon from '@/components/ui/Icon';
 import { categoryLabel } from '@/data/services';
 
-export default function AdminProfessionalApprovalTable({ professionals = [] }) {
-  const [statuses, setStatuses] = useState(
-    Object.fromEntries(professionals.map((p) => [p.id, p.verified ? 'approved' : 'pending']))
-  );
-
-  const setStatus = (id, status) => setStatuses((s) => ({ ...s, [id]: status }));
-
+// Controlled table: status comes from each professional's `status` field and
+// actions are delegated to onAction(id, 'approve'|'reject') handled by the parent.
+export default function AdminProfessionalApprovalTable({ professionals = [], onAction }) {
   const badge = {
     approved: 'bg-emerald-100 text-emerald-700',
     pending: 'bg-amber-100 text-amber-800',
@@ -48,18 +43,18 @@ export default function AdminProfessionalApprovalTable({ professionals = [] }) {
                 <div>{p.business || '—'}</div>
                 <div className="text-xs text-slate-400">{p.city}</div>
               </td>
-              <td className="px-4 py-3 text-xs text-slate-500">{p.areas.slice(0, 2).join(', ')}{p.areas.length > 2 ? '…' : ''}</td>
+              <td className="px-4 py-3 text-xs text-slate-500">{(p.areas || []).slice(0, 2).join(', ')}{(p.areas || []).length > 2 ? '…' : ''}</td>
               <td className="px-4 py-3">
-                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge[statuses[p.id]]}`}>
-                  {label[statuses[p.id]]}
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge[p.status] || badge.pending}`}>
+                  {label[p.status] || label.pending}
                 </span>
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1.5">
-                  <button onClick={() => setStatus(p.id, 'approved')} title="Aprovo" className="grid h-8 w-8 place-items-center rounded-lg text-emerald-600 hover:bg-emerald-50">
+                  <button onClick={() => onAction?.(p.id, 'approve')} title="Aprovo" className="grid h-8 w-8 place-items-center rounded-lg text-emerald-600 hover:bg-emerald-50">
                     <Icon name="Check" className="h-4 w-4" />
                   </button>
-                  <button onClick={() => setStatus(p.id, 'rejected')} title="Refuzo" className="grid h-8 w-8 place-items-center rounded-lg text-rose-600 hover:bg-rose-50">
+                  <button onClick={() => onAction?.(p.id, 'reject')} title="Refuzo" className="grid h-8 w-8 place-items-center rounded-lg text-rose-600 hover:bg-rose-50">
                     <Icon name="X" className="h-4 w-4" />
                   </button>
                   <Link to={`/professionals/${p.slug}`} title="Shiko" className="grid h-8 w-8 place-items-center rounded-lg text-navy-600 hover:bg-navy-50">

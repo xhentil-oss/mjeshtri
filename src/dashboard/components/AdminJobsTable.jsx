@@ -1,10 +1,6 @@
 import Icon from '@/components/ui/Icon';
 import { StatusBadge } from '@/dashboard/components/StatusBadge';
 import { categoryLabel } from '@/data/services';
-import { getProfessionalById } from '@/data/demoProfessionals';
-import { customers } from '@/data/demoUsers';
-
-const customerName = (id) => customers.find((c) => c.id === id)?.name || '—';
 
 export default function AdminJobsTable({ jobs = [] }) {
   return (
@@ -26,7 +22,7 @@ export default function AdminJobsTable({ jobs = [] }) {
           {jobs.map((j) => (
             <tr key={j.id} className="hover:bg-mist/50">
               <td className="px-4 py-3 font-mono text-xs text-slate-400">{j.id}</td>
-              <td className="px-4 py-3 font-medium text-navy-900">{customerName(j.customerId)}</td>
+              <td className="px-4 py-3 font-medium text-navy-900">{j.customerName || '—'}</td>
               <td className="px-4 py-3 text-slate-600">{categoryLabel(j.category)}</td>
               <td className="px-4 py-3 text-slate-600">{j.area}</td>
               <td className="px-4 py-3"><StatusBadge status={j.status} /></td>

@@ -1,29 +1,42 @@
+import { useMemo } from 'react';
 import DashboardPage from '@/dashboard/components/DashboardPage';
 import StatCard from '@/dashboard/components/StatCard';
 import Icon from '@/components/ui/Icon';
-import { platformStats } from '@/data/demoStats';
-import { professionals, professionalsByCategory } from '@/data/demoProfessionals';
+import { useAsync } from '@/hooks/useAsync';
+import { api } from '@/lib/api';
 import { allCategories } from '@/data/services';
 
+// Illustrative monthly series — there is no time-series endpoint yet.
 const monthly = [
   { m: 'Jan', v: 42 }, { m: 'Shk', v: 58 }, { m: 'Mar', v: 71 },
   { m: 'Pri', v: 64 }, { m: 'Maj', v: 89 }, { m: 'Qer', v: 103 },
 ];
 
 export default function AdminReports() {
+  const { data: stats } = useAsync(() => api.adminStats(), []);
+  const { data: prosData } = useAsync(() => api.adminProfessionals(), []);
+  const professionals = prosData || [];
+  const s = stats || {};
+
   const maxV = Math.max(...monthly.map((d) => d.v));
-  const byCategory = allCategories
-    .map((c) => ({ label: c.label, n: professionalsByCategory(c.key).length }))
-    .filter((c) => c.n > 0)
-    .sort((a, b) => b.n - a.n);
+  const byCategory = useMemo(() => {
+    const counts = professionals.reduce((acc, p) => {
+      acc[p.category] = (acc[p.category] || 0) + 1;
+      return acc;
+    }, {});
+    return allCategories
+      .map((c) => ({ label: c.label, n: counts[c.key] || 0 }))
+      .filter((c) => c.n > 0)
+      .sort((a, b) => b.n - a.n);
+  }, [professionals]);
   const maxCat = Math.max(1, ...byCategory.map((c) => c.n));
 
   return (
     <DashboardPage title="Raporte" subtitle="Pamje e përgjithshme e performancës së platformës.">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon="TrendingUp" label="Kërkesa këtë muaj" value="103" hint="+16% nga muaji i kaluar" accent="emerald" />
-        <StatCard icon="Percent" label="Norma e konvertimit" value="68%" hint="oferta → punë e pranuar" accent="amber" />
-        <StatCard icon="Clock" label="Koha mesatare e ofertës" value="14 min" accent="blue" />
+        <StatCard icon="Briefcase" label="Punë gjithsej" value={s.jobs ?? 0} accent="emerald" />
+        <StatCard icon="Send" label="Oferta gjithsej" value={s.bids ?? 0} accent="amber" />
+        <StatCard icon="Star" label="Vlerësim mesatar" value={(s.avgRating ?? 0).toFixed?.(1) ?? s.avgRating ?? 0} accent="blue" />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -39,11 +52,13 @@ export default function AdminReports() {
               </div>
             ))}
           </div>
+          <p className="mt-3 text-xs text-slate-400">Seri ilustruese.</p>
         </div>
 
         <div className="card p-6">
           <h3 className="font-semibold text-navy-900">Profesionistë sipas kategorisë</h3>
           <div className="mt-6 space-y-3">
+            {byCategory.length === 0 && <p className="text-sm text-slate-400">Ende pa të dhëna.</p>}
             {byCategory.map((c) => (
               <div key={c.label} className="flex items-center gap-3 text-sm">
                 <span className="w-28 shrink-0 text-slate-600">{c.label}</span>
@@ -56,10 +71,6 @@ export default function AdminReports() {
           </div>
         </div>
       </div>
-
-      <p className="mt-6 flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-400">
-        <Icon name="Info" className="h-4 w-4" /> Të dhënat janë demonstruese.
-      </p>
     </DashboardPage>
   );
 }
