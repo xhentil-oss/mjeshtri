@@ -10,10 +10,11 @@ export default function RegisterCustomer() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', phone: '', email: '', area: '', password: '', confirm: '' });
   const [errors, setErrors] = useState({});
+  const [busy, setBusy] = useState(false);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const errs = {};
     if (!form.name.trim()) errs.name = 'Shkruaj emrin.';
@@ -22,10 +23,16 @@ export default function RegisterCustomer() {
     if (form.password.length < 6) errs.password = 'Të paktën 6 karaktere.';
     if (form.password !== form.confirm) errs.confirm = 'Fjalëkalimet nuk përputhen.';
     setErrors(errs);
-    if (Object.keys(errs).length === 0) {
-      register({ name: form.name, email: form.email, phone: form.phone, area: form.area }, 'customer');
-      navigate(dashboardPath('customer'));
-    }
+    if (Object.keys(errs).length > 0) return;
+
+    setBusy(true);
+    const res = await register(
+      { name: form.name, email: form.email, phone: form.phone, area: form.area, password: form.password },
+      'customer',
+    );
+    setBusy(false);
+    if (res.ok) navigate(dashboardPath('customer'));
+    else setErrors({ email: res.error });
   };
 
   return (
@@ -62,7 +69,9 @@ export default function RegisterCustomer() {
           </Field>
         </div>
 
-        <button type="submit" className="btn btn-primary w-full">Regjistrohu</button>
+        <button type="submit" disabled={busy} className="btn btn-primary w-full disabled:opacity-60">
+          {busy ? 'Po regjistrohet…' : 'Regjistrohu'}
+        </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">

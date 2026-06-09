@@ -18,12 +18,13 @@ export default function RegisterProfessional() {
   const [selectedAreas, setSelectedAreas] = useState([]);
   const [errors, setErrors] = useState({});
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const toggleArea = (a) =>
     setSelectedAreas((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const errs = {};
     if (!form.name.trim()) errs.name = 'Shkruaj emrin.';
@@ -36,10 +37,21 @@ export default function RegisterProfessional() {
     if (form.password !== form.confirm) errs.confirm = 'Fjalëkalimet nuk përputhen.';
     if (!form.terms) errs.terms = 'Prano kushtet për të vazhduar.';
     setErrors(errs);
-    if (Object.keys(errs).length === 0) {
-      register({ ...form, areas: selectedAreas }, 'professional');
-      setSent(true);
-    }
+    if (Object.keys(errs).length > 0) return;
+
+    setBusy(true);
+    const res = await register(
+      {
+        name: form.name, email: form.email, password: form.password, phone: form.phone,
+        category: form.category, experience: form.experience, bio: form.bio,
+        business: form.business, nipt: form.nipt, availability: form.availability,
+        areas: selectedAreas,
+      },
+      'professional',
+    );
+    setBusy(false);
+    if (res.ok) setSent(true);
+    else setErrors({ email: res.error });
   };
 
   if (sent) {
@@ -158,7 +170,9 @@ export default function RegisterProfessional() {
         </label>
         {errors.terms && <span className="block text-xs text-rose-600">{errors.terms}</span>}
 
-        <button type="submit" className="btn btn-primary w-full">Dërgo për verifikim</button>
+        <button type="submit" disabled={busy} className="btn btn-primary w-full disabled:opacity-60">
+          {busy ? 'Po dërgohet…' : 'Dërgo për verifikim'}
+        </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">

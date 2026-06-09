@@ -16,18 +16,27 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
 
+  const [busy, setBusy] = useState(false);
+
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    const res = login(form.email, form.password);
+    setError('');
+    setBusy(true);
+    const res = await login(form.email, form.password);
+    setBusy(false);
     if (res.ok) navigate(dashboardPath(res.user.role));
     else setError(res.error);
   };
 
-  const quick = (role) => {
-    const res = loginAs(role);
+  const quick = async (role) => {
+    setError('');
+    setBusy(true);
+    const res = await loginAs(role);
+    setBusy(false);
     if (res.ok) navigate(dashboardPath(res.user.role));
+    else setError(res.error);
   };
 
   return (
@@ -53,7 +62,9 @@ export default function Login() {
           </p>
         )}
 
-        <button type="submit" className="btn btn-primary w-full">Hyr</button>
+        <button type="submit" disabled={busy} className="btn btn-primary w-full disabled:opacity-60">
+          {busy ? 'Po hyn…' : 'Hyr'}
+        </button>
       </form>
 
       <div className="my-6 flex items-center gap-3 text-xs text-slate-400">

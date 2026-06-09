@@ -1,24 +1,47 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { findUser } from '@/data/demoUsers';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { api, tokenStore } from '@/lib/api';
 
 const AuthContext = createContext(null);
 
-// Mock auth provider. State lives in memory only (demo). Replace `login`/`register`
-// with real API calls later — the consuming components won't need to change.
+// Real auth backed by the API. The JWT is kept in localStorage and the user is
+// restored on load via /auth/me. login/register return { ok, user, error }.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // true until the initial /me resolves
 
-  const login = useCallback((email, password) => {
-    const found = findUser(email, password);
-    if (found) {
-      const { password: _pw, ...safe } = found;
-      setUser(safe);
-      return { ok: true, user: safe };
-    }
-    return { ok: false, error: 'Email ose fjalëkalim i pasaktë.' };
+  // Restore session from a stored token on first mount.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!tokenStore.get()) { setLoading(false); return; }
+      try {
+        const { user } = await api.me();
+        if (active) setUser(user);
+      } catch {
+        tokenStore.clear();
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
   }, []);
 
-  // Demo helper: log in instantly as a given role (used by the login page chips).
+  const handleAuthResult = (res) => {
+    tokenStore.set(res.token);
+    setUser(res.user);
+    return { ok: true, user: res.user };
+  };
+
+  const login = useCallback(async (email, password) => {
+    try {
+      const res = await api.login(email, password);
+      return handleAuthResult(res);
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }, []);
+
+  // Demo helper used by the login-page quick chips. Uses the seeded demo logins.
   const loginAs = useCallback((role) => {
     const map = {
       customer: 'klient@demo.al',
@@ -28,16 +51,28 @@ export function AuthProvider({ children }) {
     return login(map[role], 'demo1234');
   }, [login]);
 
-  const register = useCallback((data, role) => {
-    const safe = { id: `new-${Date.now()}`, role, ...data };
-    setUser(safe);
-    return { ok: true, user: safe };
+  const register = useCallback(async (data, role) => {
+    try {
+      const res =
+        role === 'professional'
+          ? await api.registerProfessional(data)
+          : await api.registerCustomer(data);
+      return handleAuthResult(res);
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const logout = useCallback(() => {
+    tokenStore.clear();
+    setUser(null);
+  }, []);
+
+  // Let pages patch the cached user after a profile update.
+  const updateUser = useCallback((patch) => setUser((u) => (u ? { ...u, ...patch } : u)), []);
 
   return (
-    <AuthContext.Provider value={{ user, login, loginAs, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginAs, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
